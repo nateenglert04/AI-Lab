@@ -29,7 +29,8 @@ class OllamaEmbeddingFunction:
     
     def __call__(self, input: List[str]) -> List[List[float]]:
         """Generate embeddings for a list of texts using Ollama"""
-        pass
+        embedding = ollama.embed(self.model_name, input)
+        return embedding
 
 
 def load_documents(data_dir: str) -> Dict[str, str]:
@@ -116,8 +117,16 @@ def retrieve_context(collection: chromadb.Collection, query: str, n_results: int
     """
     Retrieve relevant context from ChromaDB based on the query
     """
-    pass
+    # Embed the query using OllamaEmbeddingFunction
+    embedding = collection._embedding_function([query])[0]
 
+    # Query the collection through query function in ChromaDB
+    queries = collection.query(embedding, n_results=n_results)
+
+    # Get the context from the retrieved documents
+    contexts = [query["metadata"]["source"] + " - " + query["metadata"]["chunk"] for query in queries]
+
+    return contexts
 
 
 def generate_response(query: str, contexts: List[str], model: str = "mistral:latest") -> str:
@@ -176,7 +185,7 @@ def main():
     llm_model = "llama3.2:latest"  # Change to your preferred LLM model
     
     # 1. Load documents
-    data_dir = "dnd-agent/lab08/data"
+    data_dir = "lab08/data"
     documents = load_documents(data_dir)
     
     # 2. Chunk documents using ChromaDB chunker
